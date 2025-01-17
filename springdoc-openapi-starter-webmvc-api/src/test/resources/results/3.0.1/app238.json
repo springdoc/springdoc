@@ -1,0 +1,227 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "OpenAPI definition",
+    "version": "v0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/class-hierarchy/concrete-parent": {
+      "post": {
+        "tags": [
+          "controller"
+        ],
+        "operationId": "concreteParent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ConcreteParent"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ChildOfConcrete1"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ChildOfConcrete2"
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/class-hierarchy/abstract-parent": {
+      "post": {
+        "tags": [
+          "controller"
+        ],
+        "operationId": "abstractParent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ChildOfAbstract1"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ChildOfAbstract2"
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChildOfConcrete1": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConcreteParent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "concreteChild1Param": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "ChildOfConcrete2": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConcreteParent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "concreteChild2Param": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "ConcreteParent": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "discriminator": {
+          "propertyName": "type"
+        }
+      },
+      "AbstractParent": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "discriminator": {
+          "propertyName": "type"
+        }
+      },
+      "ChildOfAbstract1": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AbstractParent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "abstrachChild1Param": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "ChildOfAbstract2": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AbstractParent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "abstractChild2Param": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "Response": {
+        "type": "object",
+        "properties": {
+          "abstractParent": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ChildOfAbstract1"
+              },
+              {
+                "$ref": "#/components/schemas/ChildOfAbstract2"
+              }
+            ]
+          },
+          "concreteParents": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ConcreteParent"
+                },
+                {
+                  "$ref": "#/components/schemas/ChildOfConcrete1"
+                },
+                {
+                  "$ref": "#/components/schemas/ChildOfConcrete2"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

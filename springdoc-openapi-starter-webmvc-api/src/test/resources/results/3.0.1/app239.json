@@ -1,0 +1,132 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "OpenAPI definition",
+    "version": "v0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/parent": {
+      "post": {
+        "tags": [
+          "hello-controller"
+        ],
+        "operationId": "parentEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Superclass"
+                  },
+                  {
+                    "$ref": "#/components/schemas/IntermediateClass"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Image"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Mail"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Home"
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Home": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Mail"
+          }
+        ]
+      },
+      "Image": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/IntermediateClass"
+          }
+        ]
+      },
+      "IntermediateClass": {
+        "required": [
+          "@type"
+        ],
+        "type": "object",
+        "discriminator": {
+          "propertyName": "@type"
+        },
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Superclass"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "@type": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "Mail": {
+        "required": [
+          "@type"
+        ],
+        "type": "object",
+        "discriminator": {
+          "propertyName": "@type"
+        },
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/IntermediateClass"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "@type": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "Superclass": {
+        "required": [
+          "@type"
+        ],
+        "type": "object",
+        "properties": {
+          "@type": {
+            "type": "string"
+          }
+        },
+        "discriminator": {
+          "propertyName": "@type"
+        }
+      }
+    }
+  }
+}
