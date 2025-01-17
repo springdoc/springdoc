@@ -37,6 +37,8 @@ import org.springdoc.core.providers.ObjectMapperProvider;
 import org.springdoc.core.providers.SpringWebProvider;
 import org.springdoc.webmvc.core.providers.SpringWebMvcProvider;
 
+import org.springdoc.webmvc.ui.oauth.proxy.SwaggerOauthProxyController;
+import org.springdoc.webmvc.ui.oauth.proxy.SwaggerOauthProxyProperties;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
 import org.springframework.boot.actuate.autoconfigure.web.server.ConditionalOnManagementPort;
 import org.springframework.boot.actuate.autoconfigure.web.server.ManagementPortType;
@@ -47,11 +49,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 
 import static org.springdoc.core.utils.Constants.SPRINGDOC_SWAGGER_UI_ENABLED;
+import static org.springdoc.core.utils.Constants.SPRINGDOC_SWAGGER_UI_OAUTH_PROXY_ENABLED;
 import static org.springdoc.core.utils.Constants.SPRINGDOC_USE_MANAGEMENT_PORT;
 import static org.springdoc.core.utils.Constants.SPRINGDOC_USE_ROOT_PATH;
 
@@ -63,6 +67,7 @@ import static org.springdoc.core.utils.Constants.SPRINGDOC_USE_ROOT_PATH;
  */
 @Lazy(false)
 @Configuration(proxyBeanMethods = false)
+@EnableConfigurationProperties(SwaggerOauthProxyProperties.class)
 @ConditionalOnProperty(name = SPRINGDOC_SWAGGER_UI_ENABLED, matchIfMissing = true)
 @ConditionalOnWebApplication(type = Type.SERVLET)
 @ConditionalOnBean(SpringDocConfiguration.class)
@@ -94,6 +99,20 @@ public class SwaggerConfig {
 	@Lazy(false)
 	SpringWebProvider springWebProvider() {
 		return new SpringWebMvcProvider();
+	}
+
+	/**
+	 * To delegate Oauth2 authentication
+	 *
+	 * @param swaggerOauthProxyProperties to configure the authorization header
+	 * @return the controller to redirect swagger authentication through application
+	 */
+	@Bean
+	@ConditionalOnMissingBean
+	@ConditionalOnProperty(name = SPRINGDOC_SWAGGER_UI_OAUTH_PROXY_ENABLED, havingValue = "true")
+	@Lazy(false)
+	SwaggerOauthProxyController swaggerOauthProxyController(SwaggerOauthProxyProperties swaggerOauthProxyProperties) {
+		return new SwaggerOauthProxyController(swaggerOauthProxyProperties);
 	}
 
 	/**
