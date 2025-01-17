@@ -21,14 +21,13 @@
  *  *  *  *
  *  *  *
  *  *
- *  
+ *
  */
 
 package org.springdoc.webflux.ui;
 
 import java.util.Optional;
 
-import org.springdoc.core.properties.SpringDocConfigProperties;
 import org.springdoc.core.properties.SwaggerUiConfigProperties;
 import org.springdoc.core.providers.ActuatorProvider;
 
@@ -38,6 +37,7 @@ import org.springframework.web.reactive.config.WebFluxConfigurer;
 import static org.springdoc.core.utils.Constants.ALL_PATTERN;
 import static org.springdoc.core.utils.Constants.CLASSPATH_RESOURCE_LOCATION;
 import static org.springdoc.core.utils.Constants.DEFAULT_WEB_JARS_PREFIX_URL;
+import static org.springdoc.core.utils.Constants.SWAGGER_UI_PREFIX;
 import static org.springframework.util.AntPathMatcher.DEFAULT_PATH_SEPARATOR;
 
 /**
@@ -67,30 +67,22 @@ public class SwaggerWebFluxConfigurer implements WebFluxConfigurer {
 	 */
 	private final SwaggerUiConfigProperties swaggerUiConfigProperties;
 
-	/**
-	 * The Spring doc config properties.
-	 */
-	private final SpringDocConfigProperties springDocConfigProperties;
-
-	/**
+    /**
 	 * Instantiates a new Swagger web flux configurer.
 	 *
 	 * @param swaggerUiConfigProperties the swagger ui calculated config
-	 * @param springDocConfigProperties the spring doc config properties
 	 * @param swaggerIndexTransformer   the swagger index transformer
 	 * @param actuatorProvider          the actuator provider
 	 * @param swaggerResourceResolver   the swagger resource resolver
 	 */
 	public SwaggerWebFluxConfigurer(SwaggerUiConfigProperties swaggerUiConfigProperties,
-			SpringDocConfigProperties springDocConfigProperties,
-			SwaggerIndexTransformer swaggerIndexTransformer,
+									SwaggerIndexTransformer swaggerIndexTransformer,
 			Optional<ActuatorProvider> actuatorProvider, SwaggerResourceResolver swaggerResourceResolver) {
 		this.swaggerIndexTransformer = swaggerIndexTransformer;
 		this.actuatorProvider = actuatorProvider;
 		this.swaggerResourceResolver = swaggerResourceResolver;
 		this.swaggerUiConfigProperties = swaggerUiConfigProperties;
-		this.springDocConfigProperties = springDocConfigProperties;
-	}
+    }
 
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
@@ -100,7 +92,7 @@ public class SwaggerWebFluxConfigurer implements WebFluxConfigurer {
 			uiRootPath.append(swaggerPath, 0, swaggerPath.lastIndexOf(DEFAULT_PATH_SEPARATOR));
 		if (actuatorProvider.isPresent() && actuatorProvider.get().isUseManagementPort())
 			uiRootPath.append(actuatorProvider.get().getBasePath());
-		registry.addResourceHandler(uiRootPath + springDocConfigProperties.getWebjars().getPrefix() + ALL_PATTERN)
+		registry.addResourceHandler(uiRootPath + SWAGGER_UI_PREFIX + ALL_PATTERN)
 				.addResourceLocations(CLASSPATH_RESOURCE_LOCATION + DEFAULT_WEB_JARS_PREFIX_URL + DEFAULT_PATH_SEPARATOR)
 				.resourceChain(false)
 				.addResolver(swaggerResourceResolver)

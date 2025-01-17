@@ -119,7 +119,6 @@ public class SwaggerConfig implements WebFluxConfigurer {
 	 * Swagger web flux configurer swagger web flux configurer.
 	 *
 	 * @param swaggerUiConfigProperties the swagger ui calculated config
-	 * @param springDocConfigProperties the spring doc config properties
 	 * @param swaggerIndexTransformer   the swagger index transformer
 	 * @param actuatorProvider          the actuator provider
 	 * @param swaggerResourceResolver   the swagger resource resolver
@@ -129,9 +128,9 @@ public class SwaggerConfig implements WebFluxConfigurer {
 	@ConditionalOnMissingBean
 	@Lazy(false)
 	SwaggerWebFluxConfigurer swaggerWebFluxConfigurer(SwaggerUiConfigProperties swaggerUiConfigProperties,
-			SpringDocConfigProperties springDocConfigProperties, SwaggerIndexTransformer swaggerIndexTransformer,
+													  SwaggerIndexTransformer swaggerIndexTransformer,
 			Optional<ActuatorProvider> actuatorProvider, SwaggerResourceResolver swaggerResourceResolver) {
-		return new SwaggerWebFluxConfigurer(swaggerUiConfigProperties,springDocConfigProperties, swaggerIndexTransformer, actuatorProvider, swaggerResourceResolver);
+		return new SwaggerWebFluxConfigurer(swaggerUiConfigProperties, swaggerIndexTransformer, actuatorProvider, swaggerResourceResolver);
 	}
 
 	/**
