@@ -26,7 +26,7 @@
 
 package org.springdoc.core.converters;
 
-import java.lang.reflect.Field;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,10 +34,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import io.swagger.v3.core.converter.AnnotatedType;
@@ -50,8 +50,10 @@ import io.swagger.v3.oas.models.media.ComposedSchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.springdoc.core.providers.ObjectMapperProvider;
+
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * The type Polymorphic model converter.
@@ -122,28 +124,18 @@ public class PolymorphicModelConverter implements ModelConverter {
 	public Schema resolve(AnnotatedType type, ModelConverterContext context, Iterator<ModelConverter> chain) {
 		JavaType javaType = springDocObjectMapper.jsonMapper().constructType(type.getType());
 		if (javaType != null) {
-			BeanDescription javaTypeIntrospection = springDocObjectMapper.jsonMapper().getDeserializationConfig().introspect(javaType);
-			for (BeanPropertyDefinition property : javaTypeIntrospection.findProperties()) {
-				boolean isUnwrapped = (property.getField() != null && property.getField().hasAnnotation(JsonUnwrapped.class)) ||
-						(property.getGetter() != null && property.getGetter().hasAnnotation(JsonUnwrapped.class));
-
-				if (isUnwrapped) {
+			for (BeanPropertyBiDefinition propertyDef : introspectBeanProperties(javaType)) {
+				if (propertyDef.isAnyAnnotated(JsonUnwrapped.class)) {
 					if (!TypeNameResolver.std.getUseFqn())
 						PARENT_TYPES_TO_IGNORE.add(javaType.getRawClass().getSimpleName());
 					else
 						PARENT_TYPES_TO_IGNORE.add(javaType.getRawClass().getName());
 				}
 				else {
-					io.swagger.v3.oas.annotations.media.Schema declaredSchema = null;
-					if (property.getField() != null) {
-						declaredSchema = property.getField().getAnnotation(io.swagger.v3.oas.annotations.media.Schema.class);
-					} else if (property.getGetter() != null) {
-						declaredSchema = property.getGetter().getAnnotation(io.swagger.v3.oas.annotations.media.Schema.class);
-					}
-
+					io.swagger.v3.oas.annotations.media.Schema declaredSchema = propertyDef.getAnyAnnotation(io.swagger.v3.oas.annotations.media.Schema.class);
 					if (declaredSchema != null &&
 							(ArrayUtils.isNotEmpty(declaredSchema.oneOf()) || ArrayUtils.isNotEmpty(declaredSchema.allOf()))) {
-						TYPES_TO_SKIP.add(property.getPrimaryType().getRawClass().getSimpleName());
+						TYPES_TO_SKIP.add(propertyDef.getPrimaryType().getRawClass().getSimpleName());
 					}
 				}
 			}
@@ -226,5 +218,100 @@ public class PolymorphicModelConverter implements ModelConverter {
 		JavaType javaType = springDocObjectMapper.jsonMapper().constructType(type.getType());
 		Class<?> clazz = javaType.getRawClass();
 		return !Modifier.isAbstract(clazz.getModifiers()) && !clazz.isInterface();
+	}
+
+	/**
+	 * Introspects the properties of the given Java type based on serialization and deserialization configurations.
+	 * This method identifies properties present in both JSON serialization and deserialization views,
+	 * and pairs them into a list of {@code BeanPropertyBiDefinition}.
+	 */
+	private List<BeanPropertyBiDefinition> introspectBeanProperties(JavaType javaType) {
+		Map<String, BeanPropertyDefinition> forSerializationProps =
+			springDocObjectMapper.jsonMapper()
+				.getSerializationConfig()
+				.introspect(javaType)
+				.findProperties()
+				.stream()
+				.collect(toMap(BeanPropertyDefinition::getName, identity()));
+		Map<String, BeanPropertyDefinition> forDeserializationProps =
+			springDocObjectMapper.jsonMapper()
+				.getDeserializationConfig()
+				.introspect(javaType)
+				.findProperties()
+				.stream()
+				.collect(toMap(BeanPropertyDefinition::getName, identity()));
+
+		return forSerializationProps.keySet().stream()
+			.map(key -> new BeanPropertyBiDefinition(forSerializationProps.get(key), forDeserializationProps.get(key)))
+			.toList();
+	}
+
+	/**
+	 * A record representing the bi-definition of a bean property, combining both
+	 * serialization and deserialization property views.
+	 */
+	private record BeanPropertyBiDefinition(
+		BeanPropertyDefinition forSerialization,
+		BeanPropertyDefinition forDeserialization
+	) {
+
+		/**
+		 * Retrieves an annotation of the specified type from either the serialization or
+		 * deserialization property definition (field, getter, setter), returning the first available match.
+		 */
+		public <A extends Annotation> A getAnyAnnotation(Class<A> acls) {
+			A anyForSerializationAnnotation = getAnyAnnotation(forSerialization, acls);
+			A anyForDeserializationAnnotation = getAnyAnnotation(forDeserialization, acls);
+
+			return anyForSerializationAnnotation != null ? anyForSerializationAnnotation : anyForDeserializationAnnotation;
+		}
+
+		/**
+		 * Checks if any annotation of the specified type exists across serialization
+		 * or deserialization property definitions.
+		 */
+		public <A extends Annotation> boolean isAnyAnnotated(Class<A> acls) {
+			return getAnyAnnotation(acls) != null;
+		}
+
+		/**
+		 * Type determined from the primary member for the property being built.
+		 */
+		public JavaType getPrimaryType() {
+			JavaType forSerializationType = null;
+			if (forSerialization != null) {
+				forSerializationType = forSerialization.getPrimaryType();
+			}
+
+			JavaType forDeserializationType = null;
+			if (forDeserialization != null) {
+				forDeserializationType = forDeserialization.getPrimaryType();
+			}
+
+			if (forSerializationType != null && forDeserializationType != null && forSerializationType != forDeserializationType) {
+				throw new IllegalStateException("The property " + forSerialization.getName() + " has different types for serialization and deserialization: "
+					+ forSerializationType + " and " + forDeserializationType);
+			}
+
+			return forSerializationType != null ? forSerializationType : forDeserializationType;
+		}
+
+		private <A extends Annotation> A getAnyAnnotation(BeanPropertyDefinition prop, Class<A> acls) {
+			if (prop == null) {
+				return null;
+			}
+
+			if (prop.getField() != null) {
+				return prop.getField().getAnnotation(acls);
+			}
+			if (prop.getGetter() != null) {
+				return prop.getGetter().getAnnotation(acls);
+			}
+			if (prop.getSetter() != null) {
+				return prop.getSetter().getAnnotation(acls);
+			}
+
+			return null;
+		}
 	}
 }
